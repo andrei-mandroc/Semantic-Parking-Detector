@@ -1,0 +1,4 @@
+opencv-python>=4.10,<5
+numpy>=1.26,<3
+ultralytics>=8.3,<9
+pytest>=8,<10

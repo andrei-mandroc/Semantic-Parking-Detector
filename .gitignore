@@ -1,0 +1,54 @@
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Environment variables and logs
+.env
+.env.*
+*.log
+
+# AI models and training artifacts
+*.pt
+*.pth
+*.onnx
+*.engine
+*.ckpt
+runs/
+
+# Model directory
+models/*
+!models/.gitkeep
+
+# Dataset
+data/raw/*
+!data/raw/.gitkeep
+
+data/processed/*
+!data/processed/.gitkeep
+
+data/samples/*
+!data/samples/.gitkeep
+
+# Generated results
+outputs/*
+!outputs/.gitkeep
+
+# Test coverage
+.coverage
+htmlcov/
