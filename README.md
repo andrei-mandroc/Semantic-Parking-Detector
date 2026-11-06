@@ -472,6 +472,29 @@ Important components to test include:
 - Dataset annotation parsing
 - Prediction accuracy calculations
 
+### Occupancy metrics
+
+`evaluate_occupancy(predicted, ground_truth)` compares matching parking-space
+IDs, with `True` (occupied) as the positive class. It returns TP, TN, FP, FN,
+accuracy, precision, recall, F1, and the IDs excluded because a prediction or
+valid reference label is missing. Undefined rates use `0.0` when their
+denominator is zero. Duplicate IDs must be caught before constructing the
+input dictionaries, as the XML parser and geometry code do.
+
+`summarize_evaluations(image_results)` reports `micro` metrics from the total
+spot counts and `macro` metrics as the mean of per-image rates. Images with no
+matching labeled spots are excluded from that mean and reported separately.
+
+```python
+from src.evaluation.metrics import evaluate_occupancy, summarize_evaluations
+
+first_image = evaluate_occupancy(
+    {"A1": True, "A2": False},
+    {"A1": True, "A2": True},
+)
+summary = summarize_evaluations([first_image])
+```
+
 ---
 
 ## 11. Development Roadmap
