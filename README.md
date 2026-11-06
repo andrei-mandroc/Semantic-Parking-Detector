@@ -318,6 +318,16 @@ The default occupancy threshold is `0.15` (15%).
 
 > Without configured parking polygons, the application performs vehicle detection only.
 
+### Inspect PKLot annotations
+
+To visualize the parking-space polygons from a matching image and XML file without running YOLO:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.visualize_annotations --image data/raw/PKLot/2013-04-14/2013-04-14_06_40_00.jpg --xml data/raw/PKLot/2013-04-14/2013-04-14_06_40_00.xml --mode geometry
+```
+
+Use `--mode ground-truth` to display the XML occupancy labels in green (free) and red (occupied). This view is for checking annotations and does not show AI predictions. Both modes save an image in `outputs/`.
+
 ---
 
 ## 8. Parking Space Configuration
