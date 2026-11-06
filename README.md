@@ -399,6 +399,16 @@ coverage < threshold   → FREE
 
 This is an initial geometric heuristic and must be evaluated and improved using the PKLot dataset.
 
+`classify_spaces` keeps the original polygon-overlap baseline with a configurable
+threshold (default `0.15`). `coverage_scores` exposes each overlap ratio.
+`classify_spaces_by_center` is a second rule that marks a space occupied when
+the center of a vehicle box lies inside or on its polygon boundary. Both rules
+use vehicle boxes and space geometry, never XML occupancy labels.
+
+Large boxes and vehicles between spaces can produce incorrect associations.
+Oblique views, occlusions, and vehicles missed by the detector can also cause
+errors. The default threshold is a starting value, not a validated optimum.
+
 Future versions should load the parking-space coordinates automatically from PKLot annotations.
 
 ---
