@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run YOLO vehicle detection on a single image.")
     parser.add_argument("--image", type=Path, required=True, help="Path to input image file.")
     parser.add_argument("--model", type=str, default="yolo11n.pt", help="YOLO model path or weights name.")
+    parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold in (0.0, 1.0].")
     parser.add_argument("--output", type=Path, default=None, help="Path to save annotated output image.")
     return parser.parse_args()
 
@@ -36,9 +37,9 @@ def main() -> None:
         print(f"Error: failed to load image from {args.image}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Loading detector with model '{args.model}'...")
+    print(f"Loading detector with model '{args.model}' (conf={args.conf})...")
     start_init = time.perf_counter()
-    detector = VehicleDetector(model_path=args.model)
+    detector = VehicleDetector(model_path=args.model, conf=args.conf)
     init_time_ms = (time.perf_counter() - start_init) * 1000
 
     height, width = image.shape[:2]
