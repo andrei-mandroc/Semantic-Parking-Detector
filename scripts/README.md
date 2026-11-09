@@ -9,6 +9,7 @@ Utility and experiment scripts for the Semantic Parking Detector.
 | `scripts/test_detection.py` | Smoke test vehicle detection on a single image (Task AI-01) | `python scripts/test_detection.py --image data/samples/sample_bus.jpg` |
 | `scripts/detect_batch.py` | Batch vehicle detection on directories or manifests (Task AI-03) | `python scripts/detect_batch.py --source data/samples --save-images` |
 | `scripts/compare_detectors.py` | Benchmark and compare multiple YOLO configurations (Task AI-04) | `python scripts/compare_detectors.py --source data/samples --save-images` |
+| `scripts/test_segmentation.py` | Instance segmentation test for vehicle contours (Task AI-05) | `python scripts/test_segmentation.py --image data/samples/sample_bus.jpg` |
 
 ## Options for `test_detection.py`
 
@@ -34,6 +35,13 @@ Utility and experiment scripts for the Semantic Parking Detector.
 - `--configs-json` (optional): Custom JSON file defining list of configurations.
 - `--output-dir` (optional): Destination directory for comparison CSV/JSON reports.
 - `--save-images` (optional flag): Saves comparative visual annotations for each configuration.
+
+## Options for `test_segmentation.py`
+
+- `--image` (required): Path to the input image file.
+- `--model` (optional, default: `yolo11n-seg.pt`): Model path or weights name.
+- `--conf` (optional, default: `0.25`): Confidence threshold in (0.0, 1.0].
+- `--output` (optional): Destination path for annotated segmentation output image.
 
 ## Smoke Test Results (Task AI-01)
 
