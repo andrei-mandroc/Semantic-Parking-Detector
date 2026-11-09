@@ -8,6 +8,7 @@ Utility and experiment scripts for the Semantic Parking Detector.
 |---|---|---|
 | `scripts/test_detection.py` | Smoke test vehicle detection on a single image (Task AI-01) | `python scripts/test_detection.py --image data/samples/sample_bus.jpg` |
 | `scripts/detect_batch.py` | Batch vehicle detection on directories or manifests (Task AI-03) | `python scripts/detect_batch.py --source data/samples --save-images` |
+| `scripts/compare_detectors.py` | Benchmark and compare multiple YOLO configurations (Task AI-04) | `python scripts/compare_detectors.py --source data/samples --save-images` |
 
 ## Options for `test_detection.py`
 
@@ -26,6 +27,13 @@ Utility and experiment scripts for the Semantic Parking Detector.
 - `--output-dir` (optional): Destination directory for reports and images (defaults to `outputs/batch_<timestamp>`).
 - `--save-images` (optional flag): Saves annotated images with bounding boxes into the output directory.
 - `--no-json` (optional flag): Disables generating `detections.json`.
+
+## Options for `compare_detectors.py`
+
+- `--source` (optional, default: `data/samples`): Path to image directory or manifest.
+- `--configs-json` (optional): Custom JSON file defining list of configurations.
+- `--output-dir` (optional): Destination directory for comparison CSV/JSON reports.
+- `--save-images` (optional flag): Saves comparative visual annotations for each configuration.
 
 ## Smoke Test Results (Task AI-01)
 
