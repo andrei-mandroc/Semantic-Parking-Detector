@@ -7,12 +7,25 @@ Utility and experiment scripts for the Semantic Parking Detector.
 | Script | Purpose | Usage Example |
 |---|---|---|
 | `scripts/test_detection.py` | Smoke test vehicle detection on a single image (Task AI-01) | `python scripts/test_detection.py --image data/samples/sample_bus.jpg` |
+| `scripts/detect_batch.py` | Batch vehicle detection on directories or manifests (Task AI-03) | `python scripts/detect_batch.py --source data/samples --save-images` |
 
 ## Options for `test_detection.py`
 
 - `--image` (required): Path to the input image file.
 - `--model` (optional, default: `yolo11n.pt`): Model path or weights name.
+- `--conf` (optional, default: `0.25`): Confidence threshold in (0.0, 1.0].
 - `--output` (optional): Destination path for annotated output image (defaults to `outputs/<name>_detection.jpg`).
+
+## Options for `detect_batch.py`
+
+- `--source` (required): Path to image directory, CSV manifest, or `.txt` file containing image paths.
+- `--model` (optional, default: `yolo11n.pt`): Model path or weights name.
+- `--conf` (optional, default: `0.25`): Confidence threshold in (0.0, 1.0].
+- `--imgsz` (optional): Input image size for YOLO inference.
+- `--device` (optional): Device identifier (`cpu`, `0`).
+- `--output-dir` (optional): Destination directory for reports and images (defaults to `outputs/batch_<timestamp>`).
+- `--save-images` (optional flag): Saves annotated images with bounding boxes into the output directory.
+- `--no-json` (optional flag): Disables generating `detections.json`.
 
 ## Smoke Test Results (Task AI-01)
 
