@@ -2,13 +2,18 @@
 import csv
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import cv2
 import numpy as np
 import pytest
 
-from src.detection.batch import collect_image_paths, export_batch_results, run_batch_detection
+from src.detection.batch import (
+    collect_image_paths,
+    export_batch_results,
+    make_annotated_filename,
+    run_batch_detection,
+)
 
 
 @pytest.fixture
@@ -150,3 +155,43 @@ def test_export_batch_results(tmp_path: Path):
         data = json.load(f)
         assert data["summary"]["total_images"] == 1
         assert len(data["records"]) == 1
+
+
+def test_make_annotated_filename_preserves_path_context_and_resolves_collision():
+    used = set()
+    name1 = make_annotated_filename(Path("cam1/frame.jpg"), used)
+    name2 = make_annotated_filename(Path("cam2/frame.jpg"), used)
+    name3 = make_annotated_filename(Path("cam1/frame.jpg"), used)
+
+    assert name1 != name2
+    assert "cam1_frame" in name1
+    assert "cam2_frame" in name2
+    assert name3 != name1
+    assert "cam1_frame_1_detected.jpg" == name3
+
+
+@patch("cv2.imwrite")
+def test_run_batch_detection_handles_imwrite_failure(mock_imwrite, temp_image_dir: Path, tmp_path: Path):
+    mock_imwrite.return_value = False
+    images = collect_image_paths(temp_image_dir)[:1]
+
+    mock_detector = MagicMock()
+    mock_detector.model_path = "mock.pt"
+    mock_detector.conf = 0.25
+    mock_detector.predict_detailed.return_value = [
+        {"box": (0, 0, 10, 10), "confidence": 0.9, "class_id": 2}
+    ]
+
+    records, summary = run_batch_detection(
+        detector=mock_detector,
+        image_paths=images,
+        output_dir=tmp_path / "out",
+        save_annotated=True,
+    )
+
+    assert summary["total_images"] == 1
+    assert summary["successful_images"] == 0
+    assert summary["failed_images"] == 1
+    assert records[0]["status"] == "error"
+    assert "Failed to save annotated image" in records[0]["error_message"]
+    assert records[0]["vehicle_count"] == 0

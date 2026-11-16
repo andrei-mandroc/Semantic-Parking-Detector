@@ -95,6 +95,7 @@ def run_comparison(
     summary_rows: list[dict[str, Any]] = []
     # Map: image_path -> {config_name: vehicle_count}
     per_image_map: dict[str, dict[str, Any]] = {str(p): {"image_path": str(p)} for p in image_paths}
+    success_sets: dict[str, set[str]] = {}
 
     for cfg in configs:
         cfg_name = cfg["name"]
@@ -128,17 +129,49 @@ def run_comparison(
             "imgsz": imgsz_val if imgsz_val else "default",
             "total_images": summary["total_images"],
             "successful_images": summary["successful_images"],
+            "failed_images": summary.get("failed_images", 0),
             "total_vehicles": summary["total_vehicles_detected"],
             "avg_inference_ms": summary["avg_inference_time_ms"],
             "total_time_ms": summary["total_inference_time_ms"],
             "description": cfg.get("description", ""),
         })
 
+        success_sets[cfg_name] = {r["image_path"] for r in records if r.get("status", "ok") == "ok"}
+
         for r in records:
             img_key = r["image_path"]
             if img_key in per_image_map:
-                per_image_map[img_key][f"{cfg_name}_vehicles"] = r["vehicle_count"]
-                per_image_map[img_key][f"{cfg_name}_ms"] = r["inference_ms"]
+                status = r.get("status", "ok")
+                per_image_map[img_key][f"{cfg_name}_status"] = status
+                if status == "ok":
+                    per_image_map[img_key][f"{cfg_name}_vehicles"] = r.get("vehicle_count", 0)
+                    per_image_map[img_key][f"{cfg_name}_ms"] = r.get("inference_ms", 0.0)
+                else:
+                    err_msg = r.get("error_message") or "error"
+                    per_image_map[img_key][f"{cfg_name}_vehicles"] = f"ERROR: {err_msg}"
+                    per_image_map[img_key][f"{cfg_name}_ms"] = None
+
+    # Check that all configurations succeeded on the exact same set of images
+    cfg_names = [cfg["name"] for cfg in configs]
+    first_set = success_sets[cfg_names[0]] if cfg_names else set()
+    all_consistent = True
+    discrepancies: dict[str, list[str]] = {}
+
+    for c_name in cfg_names[1:]:
+        c_set = success_sets[c_name]
+        if c_set != first_set:
+            all_consistent = False
+            discrepancies[c_name] = sorted(list(first_set.symmetric_difference(c_set)))
+
+    if not all_consistent:
+        print("\n[WARNING] Configurations did not succeed on the exact same set of images!")
+        for c_name, diffs in discrepancies.items():
+            print(f"  Configuration '{c_name}' had discrepancies on {len(diffs)} image(s): {diffs[:3]}")
+
+    for img_key, row in per_image_map.items():
+        row["all_configs_ok"] = all(
+            row.get(f"{cfg['name']}_status", "ok") == "ok" for cfg in configs
+        )
 
     per_image_rows = list(per_image_map.values())
 
@@ -150,7 +183,10 @@ def run_comparison(
         "ultralytics_version": ultralytics.__version__,
         "opencv_version": cv2.__version__,
         "num_images_compared": len(image_paths),
+        "all_configurations_consistent": all_consistent,
     }
+    if discrepancies:
+        metadata["discrepancies"] = discrepancies
 
     return summary_rows, per_image_rows, metadata
 
@@ -229,23 +265,28 @@ def main() -> None:
         output_dir=output_dir,
     )
 
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 90)
     print("YOLO CONFIGURATION BENCHMARK COMPARISON")
-    print("=" * 80)
-    header = f"{'Configuration':<20} | {'Model':<12} | {'Conf':<6} | {'Vehicles':<9} | {'Avg ms':<8} | {'Total ms':<9}"
+    print("=" * 90)
+    header = f"{'Configuration':<20} | {'Model':<10} | {'Conf':<6} | {'Vehicles':<9} | {'Avg ms':<8} | {'Failed':<6} | {'Total ms':<9}"
     print(header)
-    print("-" * 80)
+    print("-" * 90)
     for r in summary_rows:
         line = (
             f"{r['config_name']:<20} | "
-            f"{r['model']:<12} | "
+            f"{r['model']:<10} | "
             f"{r['conf']:<6.2f} | "
             f"{r['total_vehicles']:<9} | "
             f"{r['avg_inference_ms']:<8.1f} | "
+            f"{r['failed_images']:<6} | "
             f"{r['total_time_ms']:<9.1f}"
         )
         print(line)
-    print("=" * 80)
+    print("=" * 90)
+    if not metadata.get("all_configurations_consistent", True):
+        print("  [!] WARNING: Some configurations failed on images that succeeded in others.")
+        print("      Review 'per_image_comparison.csv' for exact failure details.")
+        print("-" * 90)
     print(f"Comparison summary CSV:    {summary_csv}")
     print(f"Per-image comparison CSV:  {per_image_csv}")
     print(f"Full JSON report:          {report_json}")

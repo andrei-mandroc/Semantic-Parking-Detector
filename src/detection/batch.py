@@ -16,6 +16,27 @@ from src.visualization.render import render_detections
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
+def make_annotated_filename(img_path: Path, used_names: set[str] | None = None) -> str:
+    """Generate an annotated output filename preserving unique path context."""
+    parents = [
+        p for p in img_path.parent.parts
+        if p and p not in (".", "..", "/", "\\") and not (len(p) == 2 and p[1] == ":")
+    ]
+    meaningful = parents[-2:] if len(parents) >= 2 else parents
+    prefix = "_".join(meaningful)
+    base_name = f"{prefix}_{img_path.stem}" if prefix else img_path.stem
+    candidate = f"{base_name}_detected{img_path.suffix}"
+
+    if used_names is not None:
+        counter = 1
+        while candidate in used_names:
+            candidate = f"{base_name}_{counter}_detected{img_path.suffix}"
+            counter += 1
+        used_names.add(candidate)
+
+    return candidate
+
+
 def collect_image_paths(source: str | Path) -> list[Path]:
     """Collect image paths from a directory, CSV manifest, or text file."""
     path = Path(source)
@@ -85,6 +106,7 @@ def run_batch_detection(
     failed_images = 0
     total_vehicles = 0
     total_infer_time_ms = 0.0
+    used_filenames: set[str] = set()
 
     for item in image_paths:
         img_path = Path(item)
@@ -126,15 +148,6 @@ def run_batch_detection(
             infer_ms = (time.perf_counter() - start_time) * 1000
 
             boxes = [d["box"] for d in detailed]
-            record["vehicle_count"] = len(boxes)
-            record["inference_ms"] = round(infer_ms, 2)
-            record["boxes"] = boxes
-            record["detections"] = detailed
-            record["status"] = "ok"
-
-            successful_images += 1
-            total_vehicles += len(boxes)
-            total_infer_time_ms += infer_ms
 
             if save_annotated and out_path:
                 annotated = render_detections(image, boxes)
@@ -147,11 +160,30 @@ def run_batch_detection(
                     (0, 0, 255),
                     2,
                 )
-                save_file = out_path / f"{img_path.stem}_detected{img_path.suffix}"
-                cv2.imwrite(str(save_file), annotated)
+                filename = make_annotated_filename(img_path, used_filenames)
+                save_file = out_path / filename
+                success = cv2.imwrite(str(save_file), annotated)
+                if not success:
+                    raise IOError(f"Failed to save annotated image to: {save_file}")
+                record["annotated_image"] = str(save_file)
+
+            record["vehicle_count"] = len(boxes)
+            record["inference_ms"] = round(infer_ms, 2)
+            record["boxes"] = boxes
+            record["detections"] = detailed
+            record["status"] = "ok"
+
+            successful_images += 1
+            total_vehicles += len(boxes)
+            total_infer_time_ms += infer_ms
 
         except Exception as exc:
+            record["status"] = "error"
             record["error_message"] = str(exc)
+            record["vehicle_count"] = 0
+            record["inference_ms"] = 0.0
+            record["boxes"] = []
+            record["detections"] = []
             failed_images += 1
 
         records.append(record)

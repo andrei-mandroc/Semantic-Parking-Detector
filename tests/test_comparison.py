@@ -94,3 +94,44 @@ def test_export_comparison(tmp_path: Path):
         data = json.load(f)
         assert "metadata" in data
         assert "configurations_summary" in data
+
+
+@patch("scripts.compare_detectors.run_batch_detection")
+@patch("scripts.compare_detectors.VehicleDetector")
+def test_run_comparison_marks_errors_and_flags_inconsistency(mock_detector_cls, mock_run_batch, tmp_path: Path):
+    mock_run_batch.side_effect = [
+        # Config 1 succeeds
+        (
+            [{"image_path": "img1.jpg", "vehicle_count": 2, "inference_ms": 10.0, "status": "ok"}],
+            {"total_images": 1, "successful_images": 1, "failed_images": 0, "total_vehicles_detected": 2, "avg_inference_time_ms": 10.0, "total_inference_time_ms": 10.0},
+        ),
+        # Config 2 fails
+        (
+            [{"image_path": "img1.jpg", "vehicle_count": 0, "inference_ms": 0.0, "status": "error", "error_message": "corrupt input"}],
+            {"total_images": 1, "successful_images": 0, "failed_images": 1, "total_vehicles_detected": 0, "avg_inference_time_ms": 0.0, "total_inference_time_ms": 0.0},
+        ),
+    ]
+
+    configs = [
+        {"name": "cfg1", "model": "yolo11n.pt", "conf": 0.25},
+        {"name": "cfg2", "model": "yolo11n.pt", "conf": 0.45},
+    ]
+    img_paths = [Path("img1.jpg")]
+
+    summary, per_img, metadata = run_comparison(
+        configs=configs,
+        image_paths=img_paths,
+        output_dir=tmp_path / "comparison_err_out",
+        save_images=False,
+    )
+
+    assert summary[0]["failed_images"] == 0
+    assert summary[1]["failed_images"] == 1
+
+    assert per_img[0]["cfg1_vehicles"] == 2
+    assert per_img[0]["cfg2_vehicles"] == "ERROR: corrupt input"
+    assert per_img[0]["cfg2_ms"] is None
+    assert per_img[0]["all_configs_ok"] is False
+
+    assert metadata["all_configurations_consistent"] is False
+    assert "cfg2" in metadata["discrepancies"]
