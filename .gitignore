@@ -52,3 +52,6 @@ outputs/*
 # Test coverage
 .coverage
 htmlcov/
+
+# Confidential / Local documentation
+IMPLEMENTATION_PLAN.md

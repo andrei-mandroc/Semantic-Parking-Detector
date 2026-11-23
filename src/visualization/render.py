@@ -5,6 +5,28 @@ import cv2
 import numpy as np
 
 
+def render_detections(
+    image: np.ndarray,
+    vehicles: list[tuple[int, int, int, int]],
+    color: tuple[int, int, int] = (255, 180, 0),
+    thickness: int = 2,
+) -> np.ndarray:
+    result = image.copy()
+    for i, (x1, y1, x2, y2) in enumerate(vehicles, start=1):
+        cv2.rectangle(result, (x1, y1), (x2, y2), color, thickness)
+        label = f"#{i}"
+        cv2.putText(
+            result,
+            label,
+            (x1, max(15, y1 - 5)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.45,
+            color,
+            1,
+        )
+    return result
+
+
 def render_parking_result(
     image: np.ndarray,
     spaces: list[dict],
