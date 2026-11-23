@@ -1,0 +1,23 @@
+<parking id="sample">
+    <space id="1" occupied="0">
+        <rotatedRect>
+            <center x="30" y="20" />
+            <size w="40" h="20" />
+            <angle d="0" />
+        </rotatedRect>
+        <contour>
+            <point x="10" y="10" />
+            <point x="50" y="10" />
+            <point x="50" y="30" />
+            <point x="10" y="30" />
+        </contour>
+    </space>
+    <space id="2" occupied="1">
+        <contour>
+            <point x="60" y="10" />
+            <point x="100" y="10" />
+            <point x="100" y="30" />
+            <point x="60" y="30" />
+        </contour>
+    </space>
+</parking>

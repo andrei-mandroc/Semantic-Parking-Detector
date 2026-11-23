@@ -318,6 +318,16 @@ The default occupancy threshold is `0.15` (15%).
 
 > Without configured parking polygons, the application performs vehicle detection only.
 
+### Inspect PKLot annotations
+
+To visualize the parking-space polygons from a matching image and XML file without running YOLO:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.visualize_annotations --image data/raw/PKLot/UFPR05/Cloudy/2013-04-14/2013-04-14_06_40_00.jpg --xml data/raw/PKLot/UFPR05/Cloudy/2013-04-14/2013-04-14_06_40_00.xml --mode geometry
+```
+
+Use `--mode ground-truth` to display the XML occupancy labels in green (free) and red (occupied). This view is for checking annotations and does not show AI predictions. Both modes save an image in `outputs/`.
+
 ---
 
 ## 8. Parking Space Configuration
@@ -389,6 +399,16 @@ coverage < threshold   → FREE
 
 This is an initial geometric heuristic and must be evaluated and improved using the PKLot dataset.
 
+`classify_spaces` keeps the original polygon-overlap baseline with a configurable
+threshold (default `0.15`). `coverage_scores` exposes each overlap ratio.
+`classify_spaces_by_center` is a second rule that marks a space occupied when
+the center of a vehicle box lies inside or on its polygon boundary. Both rules
+use vehicle boxes and space geometry, never XML occupancy labels.
+
+Large boxes and vehicles between spaces can produce incorrect associations.
+Oblique views, occlusions, and vehicles missed by the detector can also cause
+errors. The default threshold is a starting value, not a validated optimum.
+
 Future versions should load the parking-space coordinates automatically from PKLot annotations.
 
 ---
@@ -424,6 +444,38 @@ data/processed/
 
 Dataset files are excluded from Git because of their size.
 
+### Build a PKLot manifest (CV-05)
+
+Run from the project root after extracting images and matching XML files under
+`data/raw/PKLot/`:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.build_manifest --dataset-root data/raw/PKLot --manifest configs/pklot_manifest.csv --report outputs/pklot_manifest_report.json
+```
+
+The current folders follow `camera/weather/date`, so the generator reads
+`UFPR05` and `Cloudy` from their paths. Preserve this structure when adding
+data. If camera or weather is absent from paths, provide `--camera` and
+`--weather` when building a manifest for a known single-source subset. For a
+larger PKLot tree, change `--dataset-root` and the output filenames; the same
+command scans subdirectories recursively.
+
+The CSV contains paths relative to `--dataset-root`, plus camera, weather,
+date, capture session, and split. Consumers resolve image and XML paths against
+the same dataset root. The JSON report counts valid pairs and distributions by
+camera, weather, date, and split; it also lists missing partners and invalid
+pairs. The generated report is local under `outputs/`. The small subset CSV in
+`configs/` can be versioned without including images or XML files.
+
+Splits use a fixed seed (`--seed`, default `42`) and keep every capture date in
+one split, including across cameras. If no date is found, the containing
+directory acts as the session. The manifest records its format version and the
+report records the seed. The current three-day subset has 180 valid pairs:
+106 in `train` (April 13), 18 in `validation` (April 12), and 56 in `test`
+(April 14), using the default seed. Nine parking spaces in three April 13 XML
+files have no valid occupancy label; those labels cannot be used for evaluation.
+Keep the generated test split untouched during threshold selection.
+
 ---
 
 ## 10. Running Tests
@@ -451,6 +503,29 @@ Important components to test include:
 - Threshold validation
 - Dataset annotation parsing
 - Prediction accuracy calculations
+
+### Occupancy metrics
+
+`evaluate_occupancy(predicted, ground_truth)` compares matching parking-space
+IDs, with `True` (occupied) as the positive class. It returns TP, TN, FP, FN,
+accuracy, precision, recall, F1, and the IDs excluded because a prediction or
+valid reference label is missing. Undefined rates use `0.0` when their
+denominator is zero. Duplicate IDs must be caught before constructing the
+input dictionaries, as the XML parser and geometry code do.
+
+`summarize_evaluations(image_results)` reports `micro` metrics from the total
+spot counts and `macro` metrics as the mean of per-image rates. Images with no
+matching labeled spots are excluded from that mean and reported separately.
+
+```python
+from src.evaluation.metrics import evaluate_occupancy, summarize_evaluations
+
+first_image = evaluate_occupancy(
+    {"A1": True, "A2": False},
+    {"A1": True, "A2": True},
+)
+summary = summarize_evaluations([first_image])
+```
 
 ---
 
